@@ -17,23 +17,13 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
 
-    <!-- Core Theme -->
     <link
       rel="stylesheet"
-      href="//cdn.jsdelivr.net/npm/docsify@5/dist/themes/core.min.css"
-    />
-
-    <!-- Theme Add-on(s) -->
-    <link
-      rel="stylesheet"
-      href="//cdn.jsdelivr.net/npm/docsify@5/dist/themes/addons/core-dark.min.css"
-      media="(prefers-color-scheme: dark)"
-      data-group="addon"
-      data-sheet="core-dark-auto"
+      href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css"
     />
   </head>
 
-  <body class="loading sidebar-chevron-right sidebar-group-box">
+  <body>
     <div id="app"></div>
     <script>
       window.$docsify = {
@@ -52,29 +42,10 @@
           paths: 'auto',
           depth: 6,
         },
-        plugins: [
-          function (hook, vm) {
-            hook.beforeEach(html => {
-              const path = vm.route.file;
-              const url =
-                'https://github.com/Xiechengqi/tokenswitch-docsify/blob/develop/docs/' +
-                path;
-              const footer = [
-                '<hr>',
-                '<div style="display:flex;justify-content:space-between;align-items:center;font-size:0.9em;color:var(--color-text-secondary,#888);">',
-                '  <span>CC Switch · 开源项目家族</span>',
-                `  <a href="${url}">编辑此页</a>`,
-                '</div>',
-              ].join('\n');
-              return html + footer;
-            });
-          },
-        ],
       };
     </script>
-    <script src="//cdn.jsdelivr.net/npm/docsify@5/dist/docsify.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/docsify@5/dist/plugins/search.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/prism.min.js"></script>
+    <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+    <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
     <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
     <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-toml.min.js"></script>
     <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-rust.min.js"></script>
