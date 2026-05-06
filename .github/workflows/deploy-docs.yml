@@ -1,0 +1,36 @@
+name: Deploy docs to GitHub Pages
+
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Stage site
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -r docs/. _site/
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./_site
+          force_orphan: true
+          cname: docs.tokenswitch.org
+          commit_message: 'deploy: ${{ github.sha }}'

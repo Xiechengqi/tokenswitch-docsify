@@ -1,6 +1,15 @@
 <!-- markdownlint-disable first-line-h1 -->
 
-- Translations
+- 总览
 
-  - [English](/)
-  - [简体中文](/zh-cn/)
+  - [架构](/intro/architecture)
+  - [概念](/intro/concepts)
+  - [角色](/intro/roles)
+
+- 我是…
+
+  - [API 用户](/market/quickstart)
+  - [Provider](/provider/quickstart)
+  - [自部署](/self-host/overview)
+
+- [GitHub](https://github.com/tokenswitch)
