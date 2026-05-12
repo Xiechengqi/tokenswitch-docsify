@@ -6,7 +6,7 @@ CC Switch 是一组开源工具，让 **持有 AI 模型 token 的人** 和 **�
 
 ## 三件套
 
-**[cc-switch](https://github.com/farion1231/cc-switch)** — 桌面客户端
+**[cc-switch](https://github.com/xiechengqi/cc-switch)** — 桌面客户端
 
 跨平台桌面应用（Windows / macOS / Linux），统一管理 Claude Code、Codex、Gemini CLI、OpenCode、OpenClaw 五种 CLI 工具的供应商配置。Provider 用它把自己的 token 上架到市场。
 
