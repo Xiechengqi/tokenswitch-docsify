@@ -60,7 +60,7 @@ key、其他参数都一样。
 - 客户端要改 router 配置（上面三项）
 - API 用户改 market base URL
 
-可以做一个一键导入：用 cc-switch 的 [Deep Link](https://github.com/farion1231/cc-switch) 协议（`ccswitch://`）封装一个 URL，让别人点一下就导入你的 router 配置。具体格式看 cc-switch 文档。
+可以做一个一键导入：用 cc-switch 的 [Deep Link](https://github.com/Xiechengqi/cc-switch) 协议（`ccswitch://`）封装一个 URL，让别人点一下就导入你的 router 配置。具体格式看 cc-switch 文档。
 
 ## 把客户端跑在服务器上（headless）
 

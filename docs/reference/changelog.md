@@ -2,7 +2,7 @@
 
 详细更新记录见各项目仓库 Releases：
 
-- **cc-switch（客户端）**：[Releases](https://github.com/farion1231/cc-switch/releases) · [CHANGELOG.md](https://github.com/farion1231/cc-switch/blob/main/CHANGELOG.md)
+- **cc-switch（客户端）**：[Releases](https://github.com/Xiechengqi/cc-switch/releases) · [CHANGELOG.md](https://github.com/Xiechengqi/cc-switch/blob/main/CHANGELOG.md)
 - **cc-switch-router**：[Releases](https://github.com/xiechengqi/cc-switch-router/releases)
 - **cc-switch-market**：Release 页（待建）
 
