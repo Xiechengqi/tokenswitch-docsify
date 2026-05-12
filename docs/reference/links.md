@@ -4,15 +4,14 @@
 
 | 项目 | 仓库 | 用途 |
 |---|---|---|
-| cc-switch | [farion1231/cc-switch](https://github.com/farion1231/cc-switch) | 桌面客户端 |
+| cc-switch | [Xiechengqi/cc-switch](https://github.com/Xiechengqi/cc-switch) | 桌面客户端 |
 | cc-switch-router | [xiechengqi/cc-switch-router](https://github.com/xiechengqi/cc-switch-router) | 路由 |
 | cc-switch-market | （待开源） | 市场 |
 | 本文档 | [Xiechengqi/tokenswitch-docsify](https://github.com/Xiechengqi/tokenswitch-docsify) | 文档站源码 |
 
 ## 下载
 
-- cc-switch 客户端：[GitHub Releases](https://github.com/farion1231/cc-switch/releases)
-- cc-switch 客户端 Homebrew：`brew tap farion1231/ccswitch && brew install --cask cc-switch`
+- cc-switch 客户端：[GitHub Releases](https://github.com/Xiechengqi/cc-switch/releases)
 - cc-switch 客户端 AUR：`paru -S cc-switch-bin`
 - cc-switch-router：[最新二进制](https://github.com/xiechengqi/cc-switch-router/releases/download/latest/cc-switch-router-linux-amd64)
 
@@ -38,7 +37,7 @@ API 兼容协议参考：
 ## 反馈渠道
 
 - 文档错漏：直接点页面底部"编辑此页"提 PR
-- 客户端 bug：去 [farion1231/cc-switch issues](https://github.com/farion1231/cc-switch/issues)
+- 客户端 bug：去 [Xiechengqi/cc-switch issues](https://github.com/Xiechengqi/cc-switch/issues)
 - router / market bug：去对应仓库 issues
 - 使用问题：在市场里提 [工单](/market/support)
 

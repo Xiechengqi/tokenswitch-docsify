@@ -12,7 +12,7 @@ cc-switch 是一个跨平台桌面应用，用 Tauri 2 打的包。三大平台�
 
 ## 下载
 
-去 [GitHub Releases](https://github.com/farion1231/cc-switch/releases) 找最新版本。
+去 [GitHub Releases](https://github.com/Xiechengqi/cc-switch/releases) 找最新版本。
 
 ## Windows
 
@@ -21,19 +21,6 @@ cc-switch 是一个跨平台桌面应用，用 Tauri 2 打的包。三大平台�
 msi 双击安装，portable 解压即用。
 
 ## macOS
-
-**推荐 Homebrew**：
-
-```bash
-brew tap farion1231/ccswitch
-brew install --cask cc-switch
-```
-
-升级：
-
-```bash
-brew upgrade --cask cc-switch
-```
 
 **手动**：下载 `CC-Switch-v{version}-macOS.dmg`，拖到 Applications。
 
@@ -53,7 +40,7 @@ App 已 Apple 签名 + 公证，可以直接打开，不用绕过 Gatekeeper。
 paru -S cc-switch-bin
 ```
 
-**Flatpak**：官方 release 不带，按 [`flatpak/README.md`](https://github.com/farion1231/cc-switch/tree/main/flatpak) 自己从 .deb 构。
+**Flatpak**：官方 release 不带，按 [`flatpak/README.md`](https://github.com/Xiechengqi/cc-switch/tree/main/flatpak) 自己从 .deb 构。
 
 ## 数据存哪
 
