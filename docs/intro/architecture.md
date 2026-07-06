@@ -1,8 +1,8 @@
 # 架构
 
-CC Switch 由三个项目组成：客户端（cc-switch）、路由（cc-switch-router）、市场（cc-switch-market）。三者各司其职，组合成一张去中介的 token 共享网络。
+TokenSwitch 由四个项目组成：客户端（cc-switch）、路由（cc-switch-router）、Token 市场（cc-switch-market）、Share 市场（cc-switch-share-market）。四者各司其职，组合成一张去中介的 token 共享网络。
 
-## 三件套各干什么
+## 四组件各干什么
 
 **cc-switch（客户端）**
 
@@ -18,11 +18,15 @@ CC Switch 由三个项目组成：客户端（cc-switch）、路由（cc-switch-
 
 router 不存任何上游 API key 明文。
 
-**cc-switch-market（市场）**
+**cc-switch-market（Token Market）**
 
 跑在公网服务器上，本身也通过 router 的隧道挂到一个子域名下。它面向 API 用户，提供充值、API key、模型计费、Provider 收益结算、提现、工单。
 
-## 一次请求是怎么走的
+**cc-switch-share-market（Share Market）**
+
+跑在公网服务器上，面向固定周期 / 拼车式 Share 访问权交易。买家在订单群聊中直接向 Owner 付款，平台不经手资金；Owner 确认收款后，平台触发 router ACL 授予访问权。
+
+## 一次 Token Market 请求是怎么走的
 
 ```text
 API 用户
@@ -45,7 +49,21 @@ cc-switch（运行在 Provider 设备上）
 - market 不知道 Provider 的上游 API key，它只跟 router 谈。
 - router 也不知道上游 API key，它只把请求按子域名转给客户端，再由客户端自己去调上游。
 
-## 钱是怎么走的
+## Share Market 资金流
+
+```text
+买家付款（订单群聊，直接转给 Owner）
+   │
+   ▼
+Owner 在 Share Market 确认收款
+   │
+   ▼
+平台触发 router ACL grant（不经手资金）
+```
+
+Share Market 不托管资金、不验证链上/银行转账、不担保退款。
+
+## Token Market 钱是怎么走的
 
 ```text
 API 用户付费
@@ -60,9 +78,9 @@ Provider 净收入（剩下的）
 
 ## 部署形态
 
-最小部署：一台公网服务器跑 router，一台公网服务器跑 market（或者同机），无数台 Provider 个人电脑跑 cc-switch 客户端。
+最小部署：一台公网服务器跑 router，一台公网服务器跑 market 和 share-market（或者同机），无数台 Provider 个人电脑跑 cc-switch 客户端。
 
-router 和 market 也可以部署多套，用不同的域名互不干扰。比如一个面向中国用户，一个面向日本用户。
+router、market、share-market 也可以部署多套，用不同的域名互不干扰。比如一个面向中国用户，一个面向日本用户。
 
 ## 延伸阅读
 
