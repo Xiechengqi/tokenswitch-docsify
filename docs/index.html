@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <title>TokenSwitch 文档</title>
-    <link rel="icon" href="_media/favicon.ico" />
+    <link rel="icon" href="/_media/favicon.ico" />
     <meta
       name="keywords"
       content="TokenSwitch,cc-switch-server,cc-switch-router,Claude Code,Codex,Gemini CLI,token,share,拼车"
@@ -16,20 +16,121 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
-
-    <link
-      rel="stylesheet"
-      href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css"
+    <link rel="canonical" href="https://docs.tokenswitch.org/" />
+    <meta property="og:site_name" content="TokenSwitch 文档" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="TokenSwitch 文档" />
+    <meta property="og:url" content="https://docs.tokenswitch.org/" />
+    <meta
+      property="og:description"
+      content="TokenSwitch 文档：Client（cc-switch-server）与 Router（cc-switch-router），含 Share Market 与 Client Market。"
     />
+
+    <!-- Self-hosted (see docs/vendor/VERSIONS.txt). jsdelivr is unreachable from
+         parts of the audience this site is written for; a blocked CDN renders
+         the whole page blank, for readers and for crawlers alike. -->
+    <link rel="stylesheet" href="/vendor/docsify/vue.css" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "@id": "https://docs.tokenswitch.org/#website",
+        "name": "TokenSwitch 文档",
+        "url": "https://docs.tokenswitch.org/",
+        "inLanguage": "zh-Hans",
+        "publisher": {
+          "@type": "Organization",
+          "name": "TokenSwitch",
+          "url": "https://tokenswitch.org/",
+          "sameAs": [
+            "https://github.com/Xiechengqi/cc-switch-server",
+            "https://github.com/Xiechengqi/cc-switch-router"
+          ]
+        }
+      }
+    </script>
   </head>
 
   <body>
     <div id="app"></div>
     <script>
+      /* Every route is also a real directory index on GitHub Pages (see
+         `tools/build-docs-site.mjs`), so history mode answers 200 instead of the
+         404.html fallback — a crawler that gets a 404 status will not index the
+         page no matter what the body says. */
+      const SITE_ORIGIN = 'https://docs.tokenswitch.org';
+
+      /* This site used hash routing until it moved to history mode. Old links
+         live on in READMEs, chat logs, bookmarks and search results, and
+         docsify does not translate them, so `/#/intro/architecture` would
+         silently land on the cover page. Rewrite before docsify boots. */
+      if (window.location.hash.startsWith('#/')) {
+        const target = window.location.hash.slice(1);
+        window.history.replaceState(null, '', target === '/' ? '/' : target);
+      }
+
+      function canonicalUrl() {
+        const path = window.location.pathname.replace(/index\.html$/, '');
+        return SITE_ORIGIN + (path.endsWith('/') ? path : `${path}/`);
+      }
+
+      /** Keep <link rel=canonical>/og:url in step with the client-side route. */
+      const canonicalPlugin = (hook) => {
+        hook.doneEach(() => {
+          const href = canonicalUrl();
+          const link =
+            document.querySelector('link[rel="canonical"]') ||
+            document.head.appendChild(
+              Object.assign(document.createElement('link'), {
+                rel: 'canonical',
+              }),
+            );
+          link.href = href;
+
+          const ogUrl = document.querySelector('meta[property="og:url"]');
+          if (ogUrl) ogUrl.setAttribute('content', href);
+
+          const ogTitle = document.querySelector('meta[property="og:title"]');
+          if (ogTitle) ogTitle.setAttribute('content', document.title);
+
+          /* Retired stubs are reachable so old links survive, but they are
+             dead ends — keep them out of the index. */
+          const section = document.querySelector('.markdown-section');
+          const retired = !!section && section.textContent.includes('本页已下线');
+          let robots = document.querySelector('meta[name="robots"]');
+          if (retired && !robots) {
+            robots = document.head.appendChild(
+              Object.assign(document.createElement('meta'), { name: 'robots' }),
+            );
+          }
+          if (robots) {
+            robots.setAttribute(
+              'content',
+              retired ? 'noindex,follow' : 'index,follow',
+            );
+          }
+
+          const first = document.querySelector('#main > p, .markdown-section > p');
+          const summary = first && first.textContent.trim().slice(0, 160);
+          if (summary) {
+            for (const sel of [
+              'meta[name="description"]',
+              'meta[property="og:description"]',
+            ]) {
+              const el = document.querySelector(sel);
+              if (el) el.setAttribute('content', summary);
+            }
+          }
+        });
+      };
+
       window.$docsify = {
         name: 'TokenSwitch',
-        nameLink: '#/',
+        nameLink: '/',
         repo: 'Xiechengqi/tokenswitch-docsify',
+        routerMode: 'history',
+        basePath: '/',
         auto2top: true,
         coverpage: true,
         loadSidebar: true,
@@ -42,14 +143,15 @@
           paths: 'auto',
           depth: 6,
         },
+        plugins: [canonicalPlugin],
       };
     </script>
-    <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-    <script src="//cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-toml.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-rust.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
-    <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-ini.min.js"></script>
+    <script src="/vendor/docsify/docsify.min.js"></script>
+    <script src="/vendor/docsify/search.min.js"></script>
+    <script src="/vendor/prism/prism-bash.min.js"></script>
+    <script src="/vendor/prism/prism-toml.min.js"></script>
+    <script src="/vendor/prism/prism-rust.min.js"></script>
+    <script src="/vendor/prism/prism-json.min.js"></script>
+    <script src="/vendor/prism/prism-ini.min.js"></script>
   </body>
 </html>

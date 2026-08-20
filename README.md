@@ -1,83 +1,45 @@
-<p align="center">
-  <a href="https://docsify.js.org">
-    <img alt="docsify" src="./docs/_media/icon.svg">
-  </a>
-</p>
+# TokenSwitch 系统文档
 
-<p align="center">
-  A magical documentation site generator.
-</p>
+TokenSwitch 的系统级文档站，发布在 **[docs.tokenswitch.org](https://docs.tokenswitch.org)**。
 
-<p align="center">
-  <a href="#backers"><img alt="Backers on Open Collective" src="https://opencollective.com/docsify/backers/badge.svg?style=flat-square"></a>
-  <a href="#sponsors">
-    <img alt="Sponsors on Open Collective" src="https://opencollective.com/docsify/sponsors/badge.svg?style=flat-square"></a>
-  <a href="https://github.com/docsifyjs/docsify/actions/workflows/test.yml"><img src="https://github.com/docsifyjs/docsify/actions/workflows/test.yml/badge.svg" alt="Build & Test"></a>
-  <a href="https://www.npmjs.com/package/docsify"><img alt="npm" src="https://img.shields.io/npm/v/docsify.svg?style=flat-square"></a>
-  <a href="https://discord.gg/3NwKFyR"><img alt="Join Discord community and chat about Docsify" src="https://img.shields.io/discord/713647066802421792.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2&cacheSeconds=60"></a>
-  <a href="https://gitpod.io/#https://github.com/docsifyjs/docsify"><img src="https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod" alt="Gitpod Ready-to-Code"></a>
-</p>
+官网 **[tokenswitch.org](https://tokenswitch.org)** ·
+Client **[cc-switch-server](https://github.com/Xiechengqi/cc-switch-server)** ·
+Router **[cc-switch-router](https://github.com/Xiechengqi/cc-switch-router)**
 
-<p align="center">Gold Sponsor via <a href="https://opencollective.com/docsify">Open Collective</a></p>
+TokenSwitch 是一组开源工具，让手上有 AI 编程订阅额度的人和想用这些额度的人直接连接：
+Share Owner 把订阅账号做成一个 Share，在上面开出拼车位；买家按天租一个位置，用自己的
+Claude Code / Codex CLI / Gemini CLI 直连。没有代充、没有 API key 转卖、没有平台托管资金。
 
-<p align="center">
-  <a href="https://opencollective.com/docsify/order/3254">
-    <img src="https://opencollective.com/docsify/tiers/gold-sponsor.svg?avatarHeight=48">
-  </a>
-</p>
+## 内容在哪
 
-Docsify turns one or more Markdown files into a Website, with no build process required.
+所有文档都在 `docs/`，`docs/_sidebar.md` 是目录。
 
-## Features
+| 入口 | 路径 |
+| --- | --- |
+| 架构与概念 | `docs/intro/` |
+| 想用 token | `docs/share-market/` |
+| 想出 token | `docs/provider/` |
+| 想出/租主机 | `docs/client-market/` |
+| 想自部署 | `docs/self-host/` |
+| Router 控制台 | `docs/router/` |
+| 名词、FAQ、环境变量 | `docs/reference/` |
 
-- No statically built HTML files
-- Simple and lightweight
-- Smart full-text search plugin
-- Multiple themes
-- Useful plugin API
-- Emoji support
+## 本地预览
 
-## Quick Start
+```bash
+npx serve docs      # 或任意静态服务器，需支持目录 index
+```
 
-Get going fast by using a static web server or GitHub Pages with this ready-to-use [Docsify Template](https://github.com/docsifyjs/docsify-template), review the [quick start tutorial](https://docsify.js.org/#/quickstart) or jump right into a CodeSandbox example site with the button below.
+站点用 [docsify](https://docsify.js.org) 渲染（本仓库 fork 自 docsify，运行时资产自托管在
+`docs/vendor/`，见 `docs/vendor/VERSIONS.txt`）。路由是 history 模式，因此本地预览需要一个
+会把未知路径回落到 `index.html` 的服务器；线上由 `tools/build-docs-site.mjs` 为每个页面生成
+真实的目录 index，避免 GitHub Pages 用 404 状态码回落。
 
-[![Edit 307qqv236](https://codesandbox.io/static/img/play-codesandbox.svg)](https://codesandbox.io/s/307qqv236)
+## 校验与发布
 
-## Showcase
+```bash
+node tools/check-docs.mjs        # 侧边栏覆盖、死链、下线页引用
+node tools/build-docs-site.mjs   # 生成 _site/（含 sitemap.xml、robots.txt）
+```
 
-A large collection of showcase projects are included in [awesome-docsify](https://github.com/docsifyjs/awesome-docsify#showcase).
-
-## Links
-
-- [Documentation](https://docsify.js.org)
-- [Docsify CLI (Command Line Interface)](https://github.com/docsifyjs/docsify-cli)
-- CDN: [UNPKG](https://unpkg.com/docsify/) | [jsDelivr](https://cdn.jsdelivr.net/npm/docsify/) | [cdnjs](https://cdnjs.com/libraries/docsify)
-- [`develop` branch preview](https://docsify-preview.vercel.app/)
-- [Awesome docsify](https://github.com/docsifyjs/awesome-docsify)
-- [Community chat](https://discord.gg/3NwKFyR)
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Backers
-
-Thank you to all our backers! 🙏 [[Become a backer](https://opencollective.com/docsify/contribute)]
-
-<a href="https://opencollective.com/docsify#backers" target="_blank"><img src="https://opencollective.com/docsify/backers.svg?width=890"></a>
-
-## Sponsors
-
-Thank you for supporting this project! ❤️ [[Become a sponsor](https://opencollective.com/docsify/contribute)]
-
-<img src="https://opencollective.com/docsify/sponsors.svg?width=890" />
-
-## Contributors
-
-This project exists thanks to all the people who contribute. [[Contribute](CONTRIBUTING.md)].
-
-<a href="https://github.com/docsifyjs/docsify/graphs/contributors"><img src="https://opencollective.com/docsify/contributors.svg?width=890" /></a>
-
-## License
-
-[MIT](LICENSE)
+push 到 `main` / `develop` 后由 `.github/workflows/deploy-docs.yml` 自动发布到 `gh-pages`。

@@ -10,6 +10,6 @@
 - Client 与 Router 两个组件，Router 内建 Share Market 与 Client Market
 - 全部开源，可自部署
 
-[我要用 token](#/share-market/quickstart)
-[我要出 token](#/provider/quickstart)
-[我要自部署](#/self-host/overview)
+[我要用 token](/share-market/quickstart)
+[我要出 token](/provider/quickstart)
+[我要自部署](/self-host/overview)

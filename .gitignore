@@ -23,3 +23,6 @@ themes/
 # TypeScript declaration files for standard ESM consumption
 src/**/*.d.ts
 src/**/*.d.ts.map
+
+# staged output of tools/build-docs-site.mjs
+_site/
