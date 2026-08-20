@@ -1,92 +1,89 @@
-# 启用 share
+# 创建 Share
 
-share 就是把你的供应商"挂出去"，让市场可以通过 router 调用它。
+Share 是你对外的入口：绑定账号、分配子域名、设定谁能用、能用多少。
 
-## 前提
+## 建一个
 
-- 已经在 cc-switch 里 [添加供应商](/provider/add-provider)
-- 客户端能访问公网（能连上 router 即可，不需要公网 IP）
-- 一个邮箱（router 用它识别你是 share 的 owner）
+在 Client 的 Web 界面：
 
-## 第一次启用
+1. 新建 Share
+2. 绑定账号（一个或多个）
+3. 设 Share 级的 Token 限额与并发限额
+4. 保存
 
-在供应商卡片上找"启用 share"按钮。
+Router 会给它分配子域名，构成 **Share URL**：
 
-会弹一个引导：
+```text
+https://<子域名>.jptokenswitch.cc
+```
 
-### 1. 邮箱登录 router
+## 访问契约只有三件事
 
-填邮箱，收 6 位验证码，输回去。
+Share Contract v2，Owner 可编辑的就这些：
 
-router 会为你这台设备注册一个 installation（设备身份），私钥留在本地，不会泄露。
+| 字段 | 含义 |
+| --- | --- |
+| `freeAccess` | 是否公开免费。**默认 `false`，即私有** |
+| `userGrants` | 授权用户、来源和个人配额的**唯一真值** |
+| `tokenLimit` / `parallelLimit` | Share 级总限额 |
 
-> 邮箱只是身份标识，不会被卖、不会发广告。
+没有别的了。早期版本的 `acl`、`forSale`、`officialPricePercent`、`sharedWithEmails`、`marketAccessMode`、`accessByApp`、`appSettings` **全部退役**，camelCase 和 snake_case 两套写法都会被拒绝（fail-closed），不是静默忽略。
 
-### 2. claim 一个 subdomain
+## 两种访问状态
 
-每个 share 占一个 subdomain 前缀，比如 `mike-claude`、`alice-codex`。
+| `freeAccess` | 谁能调 |
+| --- | --- |
+| `false`（默认） | Owner、你手工授权的用户（`role=shareto`）、Router Share Market 管理的有效授权 |
+| `true` | 任何持有效 Router 用户 API Token 的**已登录**用户。匿名仍拒绝 |
 
-- 只允许小写字母、数字、连字符
-- 全网唯一，先到先得
-- 一旦 claim，就和你的 owner_email 绑定，别人抢不走
+即使开了 `freeAccess`，某个调用者如果另有活动授权条目，他的个人 Token 限额、并发、周期和到期策略**仍然优先生效**。
 
-如果你想要的名字被占了，换一个。
+## 手工授权用户
 
-### 3. 选 for_sale
+私有 Share 通过「授权用户与配额 / 添加授权用户」维护 `userGrants`。每条授权可以带独立的个人配额。
 
-两种模式：
+**没有单独的「授权邮箱」输入框** —— 授权和配额是同一件事，在同一个地方配。
 
-| 模式 | 含义 | 适合 |
-|---|---|---|
-| `free` | 免费分享 | 体验、demo、给朋友用 |
-| `sale` | 付费出售 | 想从市场赚钱 |
+## 市场托管的授权是只读的
 
-free share 会强制限流（默认每个真实用户 IP 同时只能 1 个并发请求），防止被滥用。
+Router Share Market 创建的授权条目带 `manager=routerShareMarket`，由 Router 独占管理。
 
-sale share 由市场计费，无并发限制。
+- 前端对它们只读
+- Server 和 Router 后端都拒绝 Owner 伪造、修改或删除
+- 普通 Share 编辑只能**原样保留**它们
 
-之后随时可以改。
+想收回市场租客，用市场页的「强制回收」，不要试图直接删授权条目。
 
-### 4. 确认
+## freeAccess 和挂市场互斥
 
-点确认，客户端会：
+一个 Share 要么公开免费，要么挂到市场卖，**不能同时**。
 
-1. 跟 router 申请一个 lease（短期凭证）
-2. 用 lease 里的一次性 SSH 用户名密码登录 router
-3. 申请 `tcpip_forward`，把你本地的某个端口映射到 router 的子域名
-4. lease 快过期时自动续
+系统在两个层面强制：业务事务检查 + 数据库触发器双向阻止。而且：
 
-share 上线后客户端右上角会显示绿点，router dashboard 上也能看到。
+- Share Market 的「添加 Share」候选列表**排除**已开 `freeAccess` 的 Share
+- 一个还没应用的「开启 Free」控制面编辑，也会阻止新建或重新打开挂牌
 
-## 后续启用
+## 限额与周期
 
-之后每次启动 cc-switch，share 会自动恢复。不用再走一遍登录、claim 流程。
+Share 级 `tokenLimit` / `parallelLimit` 是总闸。每个授权条目里还可以有个人配额。
 
-掉线了客户端会自动重连。重连失败会在 UI 上提示，看一眼网络。
+用户周期的重基线（`usageRebase`）由 **Client 保存**，通过 descriptor 下发给 Router。**Router 没有编辑权。**
 
-## 暂停 / 关闭
+## 三种典型配法
 
-- 临时暂停：在供应商卡片上点"停用 share"，share 会立即下线
-- 彻底删除：点"删除 share"，subdomain 会释放（但通常 owner_email 仍能在一段时间内重新 claim）
+| 场景 | 配法 |
+| --- | --- |
+| 只给几个朋友 | 私有（默认）+ 手工 `userGrants` 逐个授权，不挂市场 |
+| 公开免费给所有登录用户 | 开 `freeAccess`，不挂市场 |
+| 收钱 | 保持私有，[挂到 Share Market](/provider/listing)，授权由市场托管 |
 
-## 多个 share
+## 停用与删除
 
-一个 cc-switch 实例可以同时跑多个 share，每个 share 用不同的 subdomain，对应不同的供应商。
-
-适合：你买了 Claude 包月、Codex 包月、Gemini 包月，全部挂出去赚钱。
-
-每个 share 独立计费、独立看用量。
-
-## 客户端关掉后
-
-cc-switch 关掉，share 也会下线。
-
-如果你想 7×24 跑 share，建议把电脑配置成不休眠 + 自启动，或者干脆用一台小服务器（比如 NAS、迷你主机）专门跑 cc-switch。
-
-router 端如果发现 share 长时间（默认 1 小时）没心跳，会清理掉 share、lease 和 client 记录。重新打开 cc-switch 会自动重新挂上。
+Share 停用后市场挂牌也随之失效。删 Share 前先确认没有活跃租约 —— 有租约时应该走市场的回收流程，而不是直接删。
 
 ## 延伸阅读
 
-- [share 定价](/provider/pricing) — free / sale 之外的细节
-- [领取收益](/provider/claim) — 钱在哪
-- [router/share 共享与脱敏](/router/share-acl) — 给朋友看 API key 明文
+- [挂到市场](/provider/listing)
+- [准入策略](/provider/access)
+- [看板与用量](/provider/dashboard)
+- [Router 上的 Share 访问](/router/share-access)

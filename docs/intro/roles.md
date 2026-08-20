@@ -1,48 +1,50 @@
 # 角色与入门路径
 
-CC Switch 网络里有四类典型用户。先看你属于哪一类，然后顺着对应的入门路径走。
+先确认你是哪一类人，再决定读哪一章。
 
-## 我想买 token，调 API
+## 我想用别人的 token
 
-最常见的角色。你有一个项目、一个脚本、一个 IDE 插件，想用 Claude / Codex / Gemini，但不想直接订阅官方，或者订阅不上。
+你有 Claude Code / Codex CLI / Gemini CLI，缺可用额度。
 
-入门路径：
+在 Share Market 上租一个拼车位，拿到一个 Share URL，填进 CLI 的环境变量就能用。付费位有 12 小时免费试用时长，试着不合适可以换。
 
-1. [市场快速开始](/market/quickstart) — 5 分钟拿到第一个可用 API key
-2. [充值](/market/topup) — 选支付方式
-3. [OpenAI 兼容调用](/market/using-openai) 或 [Anthropic 兼容调用](/market/using-anthropic) — 把 key 接到你的程序里
+→ [租 Share 快速上手](/share-market/quickstart)
 
-## 我手里有 token 想出售
+## 我有 token，想分给别人用
 
-你买了 Claude Max、Codex 包月，每天用不完；或者你是 API 包月用户，有富余配额。把它挂到网络上换钱。
+你手上有 Claude / Codex / Gemini 的订阅或 API key，用不满。
 
-入门路径：
+在自己的机器上跑 `cc-switch-server`，把账号配好、建 Share、挂到 Share Market 上，设定拼车位价格和限额。**你的 API key 和 OAuth token 始终留在你自己的机器上，加密存储，不上传 Router。**
 
-1. [Provider 快速开始](/provider/quickstart) — 客户端装好、token 上架
-2. [share 定价](/provider/pricing) — 决定免费分享还是付费出售
-3. [领取收益](/provider/claim) → [提现](/provider/payout) — 钱到手
+→ [Share Owner 快速上手](/provider/quickstart)
 
-## 我只想看看公开数据
+## 我有闲置服务器
 
-你听说了这个项目，想先看看现在有多少人在用、有什么 share 在卖。或者你是某个 share 的 owner，想登录看一下 API key 明文给朋友。
+你有一台闲置的 Linux 服务器，想租出去或者想租一台来跑 Client。
 
-入门路径：
+Client Market 撮合主机供给：Host Provider 提供机器，Router 自动装好 `cc-switch-server`，租用方拿到一台可直接用的 Client。
 
-1. [路由 Dashboard](/router/dashboard) — 公开数据、世界地图
-2. [邮箱登录](/router/login) — 用邮箱验证码登录看自己的 share
+→ [Client Market 概览](/client-market/overview)
 
-## 我要自己搭一套
+## 我要自己部署一整套
 
-你不想用别人的 router 和 market，要部署一套独立的网络。可能是公司内部用，可能是面向特定地区。
+你不想用公共 Router，想在自己的域名下跑一套完整系统。
 
-入门路径：
+需要一台公网服务器（Router，要 wildcard DNS）加至少一台跑 Client 的机器。
 
-1. [自部署概览](/self-host/overview) — 看一下需要什么、能拿到什么
-2. [部署 router](/self-host/router-deploy) → [部署 market](/self-host/market-deploy)
-3. [域名与 TLS](/self-host/dns-tls) — wildcard 子域和 Cloudflare 配置
+→ [自部署概览](/self-host/overview)
 
-## 角色之间不是互斥的
+## 我只是想搞清楚它是怎么工作的
 
-你完全可以同时是 API 用户和 Provider：白天上班用买来的 token 调模型，晚上把自己 Claude Max 的剩余配额挂出去。市场会自动撮合。
+→ [架构](/intro/architecture) → [关键概念](/intro/concepts) → [安全与边界](/reference/security)
 
-只要邮箱一致，账户里的余额、收益、充值、提现都在同一个面板里看。
+## 角色和组件的对应关系
+
+| 角色 | 谁来做 | 跑什么 |
+| --- | --- | --- |
+| 买家（租位/租机） | 用 Code Agent CLI 的人 | 只用 CLI，不装任何东西 |
+| Share Owner | 有 token 的人 | `cc-switch-server` |
+| Host Provider | 有服务器的人 | 由 Router 自动部署 `cc-switch-server` |
+| Router / Market 运营方 | 站点运营者 | `cc-switch-router` |
+
+买家不需要安装任何东西。Share Owner 和 Host Provider 跑的是同一个程序，区别只在于谁来装、谁来管。

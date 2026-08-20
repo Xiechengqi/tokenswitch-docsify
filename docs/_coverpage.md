@@ -2,14 +2,14 @@
 
 ![logo](_media/icon.svg)
 
-# CC Switch
+# TokenSwitch
 
-> 开源的 Claude Code / Codex token 共享网络
+> 开源的 Claude Code / Codex / Gemini token 共享网络
 
-- 多 CLI 工具（Claude Code、Codex、Gemini CLI、OpenCode、OpenClaw）的统一管理
-- token 持有者和 API 用户直接连通，无需中间商
-- 客户端、路由、市场三件套，可自部署
+- 把手上的订阅额度以「拼车位」形式共享出去，或按天租用别人的拼车位
+- Client 与 Router 两个组件，Router 内建 Share Market 与 Client Market
+- 全部开源，可自部署
 
-[我要买 token](#/market/quickstart)
+[我要用 token](#/share-market/quickstart)
 [我要出 token](#/provider/quickstart)
 [我要自部署](#/self-host/overview)

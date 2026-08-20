@@ -2,46 +2,47 @@
 
 - 总览
 
-  - [项目家族](/)
+  - [TokenSwitch 是什么](/)
   - [架构](/intro/architecture)
   - [关键概念](/intro/concepts)
   - [角色与入门路径](/intro/roles)
 
-- 市场（买 token）
+- 租 Share（用 token）
 
-  - [快速开始](/market/quickstart)
-  - [充值](/market/topup)
-  - [API key](/market/api-keys)
-  - [模型与计费](/market/models-pricing)
-  - [OpenAI 兼容调用](/market/using-openai)
-  - [Anthropic 兼容调用](/market/using-anthropic)
-  - [用量与账单](/market/usage-billing)
-  - [工单](/market/support)
+  - [快速开始](/share-market/quickstart)
+  - [挑选与租用拼车位](/share-market/rent)
+  - [在 CLI 中使用](/share-market/using-cli)
+  - [计费与结算](/share-market/billing)
 
-- Provider（出 token）
+- Share Owner（出 token）
 
   - [快速开始](/provider/quickstart)
-  - [安装客户端](/provider/install)
-  - [添加供应商](/provider/add-provider)
-  - [启用 share](/provider/share)
-  - [share 定价](/provider/pricing)
-  - [领取收益](/provider/claim)
-  - [提现](/provider/payout)
+  - [安装 Client](/provider/install)
+  - [添加供应商与账号](/provider/add-provider)
+  - [创建 Share](/provider/share)
+  - [挂售拼车位](/provider/listing)
+  - [定价与服务期限](/provider/pricing)
+  - [市场准入与授信](/provider/access)
+  - [收款与账务](/provider/billing)
   - [看用量](/provider/dashboard)
-  - [MCP / Skills / Prompts](/provider/extras)
+
+- Client Market（出主机 / 租主机）
+
+  - [概览](/client-market/overview)
+  - [出租主机](/client-market/host-provider)
+  - [租用主机](/client-market/rent-host)
 
 - 路由公开面
 
   - [Dashboard](/router/dashboard)
   - [邮箱登录](/router/login)
-  - [share 共享与脱敏](/router/share-acl)
+  - [Share 访问与脱敏](/router/share-access)
 
 - 自部署
 
   - [概览](/self-host/overview)
-  - [部署 router](/self-host/router-deploy)
-  - [部署 market](/self-host/market-deploy)
-  - [客户端接入](/self-host/client-onboard)
+  - [部署 Router](/self-host/router-deploy)
+  - [接入 Client](/self-host/client-onboard)
   - [域名与 TLS](/self-host/dns-tls)
 
 - 参考
@@ -49,7 +50,7 @@
   - [术语表](/reference/glossary)
   - [常见问题](/reference/faq)
   - [安全与边界](/reference/security)
-  - [router 环境变量](/reference/router-env)
-  - [market 环境变量](/reference/market-env)
+  - [Router 环境变量](/reference/router-env)
+  - [已下线功能](/reference/retired)
   - [更新历史](/reference/changelog)
   - [相关链接](/reference/links)

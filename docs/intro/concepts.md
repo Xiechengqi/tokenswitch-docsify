@@ -1,73 +1,117 @@
 # 关键概念
 
-下面是文档里反复出现的几个词。看一遍，后面读起来会顺很多。
+按你会遇到的顺序排列。
 
-## installation（安装实例）
+## Installation
 
-一台跑着 cc-switch 客户端或 cc-switch-market 的设备，在 router 上注册之后，叫做一个 installation。注册时会生成一对设备密钥，私钥留在本地，公钥上传给 router。后续所有跟 router 的通信都用这把私钥签名。
+一个 `cc-switch-server` 实例在 Router 上的注册身份。Client 首次启动并填入 Router API base 后完成 `register → owner bind → client tunnel claim`，此后这台机器就有了稳定的 installation 身份和一个可选的 client 子域名。
 
-一台机器一个 installation。换电脑就要重新注册。
+## Client tunnel / Share tunnel
 
-## share
+Client 用 SSH 反向端口转发主动连出到 Router，Router 不需要能直接访问 Client。
 
-Provider 在客户端创建的一个"对外出售的 token 通道"。每个 share 包含：
+- **client tunnel** 承载管理面：Router 的 Clients 页可以经它打开 Client 自己的 Web 界面
+- **share tunnel** 承载数据面：买家的推理请求经它下发到 Client
 
-- 一个 subdomain（子域名前缀，比如 `mike-claude`）
-- 一个 for_sale 标记（free 或 sale）
-- 一个上游 API key（不离开 Provider 设备）
-- 可选的 `shared_with_emails`（白名单，只让特定邮箱看到 API key 明文）
+## Provider（供应商）
 
-share 启用后会在 router dashboard 上出现，市场调用时通过 subdomain 找到它。
+一份上游接入配置：接口地址、协议类型、模型映射。分 Claude / Codex / Gemini 三类 app。Provider 本身不含可用凭据。
 
-## lease（租约）
+注意这个词有两个含义，文档里会区分：
 
-短期凭证，用来开 SSH 反向隧道。客户端启动 share 时跟 router 申请 lease，里面包含一次性 SSH 用户名密码。lease 默认 60 秒过期，过期后客户端会续期。
+- **Upstream Provider**：上游模型服务（Anthropic、OpenAI、Google 等）
+- **Host Provider**：在 Client Market 里贡献服务器的人
 
-lease 的设计是为了避免长期共享密钥泄漏：哪怕被截获，也只能用一次、用一会儿。
+## Account（账号）
 
-## tunnel（隧道）
+绑在 Provider 上的一份具体凭据：API key，或一次 OAuth 登录得到的 token 组。账号凭据在 Client 本地用 XChaCha20-Poly1305 加密存储，**永远不会上传到 Router**。
 
-客户端通过 SSH 反向转发，把本地的一个端口（默认 `127.0.0.1:15721`）映射到 router 的子域名。请求进 router 后顺着这条隧道回到客户端。
+## Share
 
-不需要公网 IP，不需要开放路由器端口，能联网就能跑 share。
+一个可以被外部调用的入口。Share 绑定一个或多个账号，Router 给它分配一个子域名，构成 **Share URL**。
 
-## API key（市场签发）
+Share 的访问契约只有三件事：
 
-API 用户在 market 创建的密钥，用来调 OpenAI / Anthropic 兼容接口。它跟 Provider 的上游 API key 是两回事。
+- `freeAccess` —— 是否公开。**默认 false，即私有**
+- `userGrants` —— 按用户的授权条目
+- `tokenLimit` / `parallelLimit` —— 限额
 
-- API 用户拿到的是 market 签发的 key（`sk-...`），余额由 market 管理
-- Provider 上传给 client 的是上游真实 key，永远不出本地
+早期版本的 `acl`、`forSale`、`sharedWithEmails`、`marketAccessMode` 等字段已全部废弃，出现即拒绝（fail-closed）。
 
-## ledger（账本）
+## Share descriptor
 
-market 内部的资金账本。每一次充值、扣费、抽成、提现，都是 ledger 上的一条 transaction。账户类型包括：
+Router 侧对某个 Share 的描述记录：子域名、状态、限额、准入策略。Router 靠它在收到请求时定位目标 Client 和目标 Share，但它不包含任何上游凭据。
 
-| 账户 | 含义 |
-|---|---|
-| `user_cash` | API 用户可用余额 |
-| `user_reserved` | 请求预授权锁定 |
-| `client_payable` | Provider 待提现余额 |
-| `payout_reserved` | 已发起提现锁定 |
-| `fee_revenue` | 平台手续费、抽成 |
+## Pending share edit
 
-admin 不能直接改余额缓存，所有人工调整都要走 ledger transaction，留下审计痕迹。
+Router 需要修改 Client 上的 Share 状态时（例如租用成功后新增一条授权），不会直接写 Client，而是挂一条待处理编辑，由 Client 拉取、应用、回执。
 
-## subdomain（子域名）
+由 `routerShareMarket` 管理的授权条目对 Share Owner 是只读的：普通 Share 编辑不能修改或删除它们。
 
-router 用 wildcard DNS 接管整个域，比如 `*.tokenswitch.cc`。每个 share 占用一个子域名前缀。market 自己也占一个，比如 `market.tokenswitch.cc`。请求进入 router 时按 Host 头找到对应 share 或 market。
+## Listing（挂售）与拼车位（Seat）
 
-子域名是先到先得，由 Provider 在客户端 claim。
+**Listing** 是一个 Share 在 Share Market 上的挂牌。一个挂牌下最多 **20 个拼车位**。
 
-## for_sale（出售标记）
+每个拼车位是独立售卖单元，各自有：
 
-share 有两种状态：
+- Token 限额（留空 = 不限额）与并发限额
+- 每日价格（留空 = 免费位，不计费）
+- 服务期限：1–365 天固定期限，或无固定期限
 
-- `free`：免费，但有并发限流（默认每个真实用户 IP 同时只能一个请求）
-- `sale`：付费，由 market 计费扣款
+一个 Share 要么开 `freeAccess` 公开，要么挂售，**两者互斥**。
 
-free share 主要用于体验、demo。真要让别人用得舒服，建议设成 sale。
+## Subscription（租用关系）
+
+买家占用某个拼车位后形成的关系。固定期限从**买家确认租用成功时**起算，绝对到期时间同时冻结到 Router 的 Subscription 和 Client 的授权条目。
+
+授权延迟或账单暂停**不顺延**到期时间。到期即停，不自动恢复。
+
+## Token 限额与重置周期
+
+只有设置了 Token 限额才谈得上重置周期，可选：累计不重置 / 每天 / 自然周 / 每 7 天 / 自然月 / 每 30 天。
+
+重置周期和服务期限是两件独立的事：一个 30 天期限的位子可以配「每天重置」，也可以配「累计不重置」。
+
+## 赊账账户（Credit account）
+
+按 **买家 × 供应商** 聚合的一本 USD 账。Share Market 和 Client Market 的付费服务共用同一本账。
+
+- 每段授权服务的**前 12 小时健康时长不计费**（试用）
+- 只按 Router 观测到的健康服务区间累计；不可用或状态未知的时间不计费
+- 有限额度用到 **80%** 时双方预警
+- 用满、主动清账、或最后一个服务结束 → 合并出账，暂停相关服务
+
+出账时会把供应商当时的收款方式与联系方式**冻结进该账单**，之后改资料不影响已出账单。
+
+## 线下付款与确认
+
+平台不经手资金。买家线下付款后在系统里**声明已付**，供应商**确认到账**后服务恢复。整个过程没有抽成、没有托管、没有提现。
+
+## 汇率
+
+默认 1 USD : 7 CNY，仅作展示换算。出账时冻结进账单。**记账货币始终是 USD**，CNY 不参与账务计算。
+
+## Ingress context
+
+Router 下发请求给 Client 时随附的一段签名上下文，标明这是哪个 Share、哪个用户、哪次请求。Client 侧验签，并采用**非对称新鲜度窗口**：接受最多 30 秒前签发、最多 5 秒未来签发的上下文。
+
+验签失败返回空正文 `401`，诊断只走内部响应头，不外泄给调用方。Router 必须在转发前剥离这些内部头，防止外部伪造。
+
+## Host 状态机（Client Market）
+
+```text
+idle ──► locked ──► allocated ──► draining ──► idle
+```
+
+外加 `unreachable` / `abnormal` / `disabled` / `reserved` 四个异常或特殊态，`reserved` 用于报价锁定期。
+
+## 区域（Region）
+
+当前有 `japan` / `singapore` / `hongkong` / `usa` 四个区域，各自独立部署一套 Router。**用户、Share、账务不跨区域共享。**
 
 ## 延伸阅读
 
-- [架构](/intro/architecture) — 这些概念在请求链路里怎么串起来
-- [术语表](/reference/glossary) — 更完整的词汇表
+- [架构](/intro/architecture)
+- [角色与入门路径](/intro/roles)
+- [名词表](/reference/glossary)
+- [已下线功能](/reference/retired) — 如果你在旧文档里见过本页没提到的词

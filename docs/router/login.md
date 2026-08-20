@@ -1,70 +1,71 @@
 # 邮箱登录
 
-router 用 Resend 发邮箱验证码登录。这套登录跟市场登录是 **同一套**（市场就是用 router 的邮箱验证码登录的），但 token 互相隔离：你登 router dashboard 看到的 share API key 信息，不会带回 market。
+Router 没有密码，只用邮箱验证码。邮件通过 Resend 发送。
 
-## 谁需要登录
+## 登录流程
 
-- **share owner**：登录后能看到自己 share 的 API key 明文
-- **被 owner 加进 `shared_with_emails` 的人**：同上
-- **Provider 自己（cc-switch 客户端）**：第一次启用 share 时强制走一遍登录，把客户端跟 owner_email 绑定
+1. 站点右上角「登录」
+2. 填邮箱
+3. 收 6 位验证码
+4. 输回去
+5. Router 签发 access token + refresh token
 
-普通访客不用登录，公开 dashboard 已经够看了。
+## Token 有效期
 
-## 怎么登
+| 项 | 默认值 | 环境变量 |
+| --- | --- | --- |
+| 验证码有效期 | 300 秒 | `CC_SWITCH_ROUTER_AUTH_CODE_TTL_SECS` |
+| 发码冷却 | 60 秒 | `CC_SWITCH_ROUTER_AUTH_CODE_COOLDOWN_SECS` |
+| Access token | 1800 秒（30 分钟） | `CC_SWITCH_ROUTER_AUTH_SESSION_TTL_SECS` |
+| Refresh token | 2592000 秒（30 天） | `CC_SWITCH_ROUTER_AUTH_REFRESH_TTL_SECS` |
 
-router 首页 → 右上角 "登录"。
+Access token 过期后用 refresh token 自动续，30 天内不用重新收验证码。
 
-1. 填邮箱
-2. 收 6 位验证码（用 Resend 发）
-3. 输回去
-4. router 签发一个 access token（默认 30 分钟）+ refresh token（默认 30 天），存 HttpOnly cookie
+冷却必须小于验证码有效期，Settings 保存时会校验这条关系。
 
-之后浏览器自动带 cookie，刷新页面就是登录态。
+## 限流
 
-## 验证码限流
+| 维度 | 默认上限 | 环境变量 |
+| --- | --- | --- |
+| 单邮箱每小时发码 | 30 | `CC_SWITCH_ROUTER_AUTH_EMAIL_HOURLY_LIMIT` |
+| 单 IP 每小时发码 | 20 | `CC_SWITCH_ROUTER_AUTH_IP_HOURLY_LIMIT` |
+| 单来源每小时发码 | 10 | `CC_SWITCH_ROUTER_AUTH_SOURCE_HOURLY_LIMIT` |
+| 单挑战最多输错 | 5 次 | `CC_SWITCH_ROUTER_AUTH_MAX_VERIFY_ATTEMPTS` |
 
-router 防止滥用，做了几层限流（默认值，可配置）：
+另外还有一层通用的认证滥用防护：**10 分钟内 10 次失败 → 封禁 1 小时**。
 
-| 维度 | 默认上限 |
-|---|---|
-| 单邮箱每小时 | 30 次 |
-| 单 IP 每小时 | 20 次 |
-| 单 installation 每小时 | 10 次 |
-| 同邮箱 / 同设备发码冷却 | 60 秒 |
-| 单挑战最多输错 | 5 次 |
+触发限流返回 `429`，等冷却过去再来。
 
-触发限流会返回 429，等冷却时间过了再来。
+## 相关端点
 
-## session 管理
+| 端点 | 用途 |
+| --- | --- |
+| `POST /v1/auth/email/request-code` | 请求验证码 |
+| `POST /v1/auth/email/verify-code` | 校验并换 session |
+| `POST /v1/auth/session/refresh` | 续期 |
+| `GET /v1/auth/session/me` | 当前身份 |
+| `POST /v1/auth/session/logout` | 登出 |
 
-- access token 30 分钟过期
-- refresh token 30 天过期
-- 刷新接口：`POST /v1/auth/session/refresh`
-- 查询当前会话：`GET /v1/auth/session/me`
+## API Token 是另一回事
 
-cookie 是 HttpOnly + Secure（生产环境），JS 拿不到。
+浏览器 Session 用于网页操作。**调用 Share 用的是 API Token**，在 `/account/api-keys` 获取，和 Session 是两套凭据。
 
-## 退出
+一个 API Token 走遍全站所有你有权访问的 Share —— 不是每租一个 Share 发一个 key。
 
-dashboard 顶部 → 头像菜单 → "退出"。
+Token 在 Router 侧**以明文列存储**（为了支持在 UI 里重复展示）。这意味着数据库泄露等同于活跃 Token 泄露。所以：**别把 Token 放进公开仓库、日志或截图**，怀疑泄露就在同一页重置。
 
-router 会立即作废当前 session。
+部分 API 支持带 scope 的 Token，例如市场准入接口的 `market:access:read` / `market:access:write`；Share 调用用的 scope 是 `share:invoke`。
 
-## 这个登录和市场登录的关系
+## 各区域独立
 
-它们 **是同一套身份**：
+四个区域站点各自独立部署，**账号不互通**。在日本区登录不等于在新加坡区有账号。
 
-- market 用户 / Provider 都用同一个 router 邮箱认证
-- Web session 互相 **不共用 cookie**（域名不同，token 不同）
-- 但 owner 邮箱判定是一致的：你在 market 看到 `/claim` 余额，跟在 router dashboard 看到自己 share API key，用的是同一个 owner_email
+## 聊天室的额外限制
 
-## 这个登录不能调 API
-
-router 的 web session 只是 Web 登录态，**不能用来调模型 API**。模型 API 走 market，需要 market 签发的 sk- 开头 API key。
-
-具体边界见 [安全与边界](/reference/security)。
+Client 公开聊天室的历史匿名可读，但**发送真人消息必须用 Router 登录 Session** —— 普通用户 API Token 不能发。
 
 ## 延伸阅读
 
-- [Dashboard](/router/dashboard) — 登录后能看什么
-- [share 共享与脱敏](/router/share-acl) — 怎么把 API key 给朋友看
+- [Dashboard](/router/dashboard)
+- [Share 访问与脱敏](/router/share-access)
+- [Router 环境变量](/reference/router-env)

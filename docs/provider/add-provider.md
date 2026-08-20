@@ -1,81 +1,97 @@
-# 添加供应商
+# 添加 Provider 和账号
 
-cc-switch 把"一个 token + 一个端点 + 一些可选配置"打包叫做"供应商"（provider）。先有供应商，才能启用 share。
+两个概念要分清：
 
-## 两种供应商
+- **Provider（供应商）** —— 一份接入配置：接口地址、协议类型、模型映射。不含可用凭据
+- **账号（Account）** —— 绑在 Provider 上的具体凭据：一个 API key，或一次 OAuth 登录拿到的 token 组
 
-**应用专属供应商**：只对一个 CLI 工具生效（Claude Code / Codex / Gemini CLI / OpenCode / OpenClaw 五选一）。
+一个 Provider 下可以挂多个账号。
 
-**统一供应商**：一份配置同步到多个应用。OpenCode 和 OpenClaw 共用一份配置时常见。
+## 三类 app
 
-新手先选应用专属，简单。
+Client 按 app 组织 Provider：**Claude**、**Codex**、**Gemini**。同一个上游可能同时出现在多类里（比如 Gemini 既能服务 Gemini CLI，也能通过协议转换服务 Claude Code）。
 
-## 用预设添加
+## 支持的类型
 
-预设是预先配置好的模板，只需要填 API key。
+| 类型 | Claude | Codex | Gemini | 状态 |
+| --- | :---: | :---: | :---: | --- |
+| Claude API / Auth / OAuth | ✅ | — | — | Native |
+| Codex / OpenAI OAuth | ✅ | ✅ | — | Native |
+| Gemini / Gemini CLI OAuth | ✅ | ✅ | ✅ | Native |
+| OpenRouter / Ollama / Nvidia / DeepSeek API | ✅ | ✅ | ✅ | Native |
+| Antigravity / Agy OAuth | ✅ | — | ✅ | Native（经预设映射） |
+| Cursor OAuth / API Key | 🧪 | 🧪 | 🧪 | Experimental |
+| AWS Bedrock | ⚠️ | ⚠️ | ⚠️ | Planned |
+| GitHub Copilot | ⚠️ | ⚠️ | ⚠️ | Fallback |
+| Kiro OAuth | ⚠️ | — | — | Planned |
+| DeepSeek Account | ⚠️ | — | — | Planned |
 
-### 步骤
+`✅ Native` = 已覆盖且属于主线验收对象。`🧪` / `⚠️` = 已接线但缺完整真实验收，能不能跑通取决于上游，别拿来做付费位。
 
-1. 主界面右上角点 **+**
-2. 选一个预设：比如 "Claude 官方"、"PackyCode"、"DeepSeek" 等
-3. 名称和端点自动填好
-4. 填上你的 API key
-5. （可选）填备注
-6. 点"添加"
+运行时可以查 `GET /api/provider-matrix` 拿到当前实例的实际矩阵。
 
-### 当前预设举例
+## API Key 类
 
-cc-switch 内置 50+ 预设，覆盖：
+最简单的一类。在 Web 界面：
 
-- **Claude 系**：Claude 官方、DeepSeek、智谱 GLM、Kimi、ModelScope、PackyCode、AICodeMirror 等
-- **Codex 系**：OpenAI 官方、各种中转
-- **Gemini 系**：Gemini 官方、各种中转
-- **聚合服务**：DMXAPI、SiliconFlow、AiHubMix 等
-
-完整列表以客户端 UI 为准（会随版本更新）。
-
-## 自定义供应商
-
-预设里没有的，选"自定义"：
-
-1. 自己填名称
-2. 填上游 API base URL
+1. 选 app
+2. 选 Provider 预设（或自定义接口地址）
 3. 填 API key
-4. （某些场景下）填模型映射、自定义 header
+4. 保存
 
-适合企业内部网关、自建中转服务。
+预设覆盖 OpenRouter、Ollama、Nvidia、DeepSeek、SubRouter、OpenCode Go 等常见上游。
 
-## 切换
+## OAuth 类
 
-- **主界面**：选中某个供应商，点"启用"
-- **系统托盘**：右键托盘图标，直接选供应商，立即生效
+Claude、Codex、Gemini、Antigravity、Cursor、Copilot、Kiro、Grok、Kimi、Qoder 的 OAuth 登录、刷新、profile 和配额查询**全部在 Server 侧完成**，不需要桌面应用。
 
-切换后大多数 CLI 需要重启终端。**Claude Code 例外**，支持热切换无需重启。
+界面上点登录 → 跳转授权 → 回调 → 完成。
 
-## 编辑 / 删除
+### 远程管理时的 OpenAI CLI OAuth
 
-供应商卡片右上角有齿轮图标，可以编辑或删除。
+有一个例外要注意：OpenAI 的 CLI OAuth 只接受官方回调地址 `http://localhost:1455/auth/callback`，Server **不会**伪造或替换 redirect URI。
 
-⚠️ 当前激活的供应商不能删除。先切到别的再删。这是为了保证 CLI 工具任何时候都有一份可用配置。
+如果你是从别的机器远程管理这台 Client（HTTPS 访问），流程是：
 
-## 共享配置片段
+1. 在 Codex OAuth 账号区选 CLI OAuth，打开授权链接
+2. 浏览器授权后会跳到 `localhost:1455` —— **页面打不开是正常的**，远程部署下本来就没有那个服务
+3. 从地址栏复制**完整的** `http://localhost:1455/auth/callback?code=...&state=...`，粘回管理界面提交
 
-不同供应商之间常有共同配置（代理设置、自定义 header、插件配置等）。cc-switch 提供"共享配置片段"机制：
+Server 会校验 scheme / host / port / path、state、当前管理员主体和会话期限后再换 token。只接受完整 callback URL，不接受裸 code。
 
-1. 在某个供应商的"编辑"里 → "共享配置面板"
-2. 点"从当前供应商提取"
-3. 添加新供应商时勾选"写入共享配置"
+Device OAuth 路径不受这个限制，可以直接用。
 
-这样切换供应商时插件配置不会丢。
+## 凭据在哪
 
-## 排序 / 导入导出
+**只在你这台机器上。**
 
-- 拖拽排序
-- 顶部菜单 → "导入" / "导出" 整套配置
+- 用 XChaCha20-Poly1305 加密后存在 `accounts.json`
+- 根密钥在 `accounts.key`（也可以用环境变量 `CC_SWITCH_SERVER_ACCOUNTS_ENCRYPTION_KEY` 提供）
+- Router **拿不到**明文，租客也拿不到
+- 管理面 API（`GET /api/accounts` 等）只返回「凭据是否存在」和运行状态，**不返回**access / refresh / id token、API key、额外请求头、profile 或上游原始响应
 
-适合换电脑或备份。
+## 绑定是显式的，不做故障转移
+
+这一条很重要，容易踩坑：
+
+**托管 OAuth Provider Bundle 必须显式绑定账号。** 请求**不会**按占用情况、配额、冷却、并发或错误自动切换账号。
+
+唯一的例外：第一次收到 `401` 时，会对**原账号**强制刷新一次并重放该请求。仅此而已。
+
+所以如果你想要「一个账号挂了自动切另一个」，现在没有。想要冗余就建多个 Share，或者在上游侧解决。
+
+## 验证
+
+加完之后打一次真实请求确认链路通。可以先在本地：
+
+```bash
+curl -s http://127.0.0.1:15721/health
+```
+
+然后建 Share，通过 Share URL 打一次 `/v1/models`（见 [用 CLI 调用](/share-market/using-cli)）。
 
 ## 延伸阅读
 
-- [启用 share](/provider/share) — 把供应商挂到市场
-- [MCP / Skills / Prompts](/provider/extras) — cc-switch 的其他功能
+- [创建 Share](/provider/share) — 下一步
+- [看板与用量](/provider/dashboard)
+- [安全与边界](/reference/security)

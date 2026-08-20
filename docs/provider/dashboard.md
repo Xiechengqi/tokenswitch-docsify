@@ -1,74 +1,76 @@
 # 看用量
 
-Provider 看用量有两个面板，各看一边。
+用量数据分散在两处：Client 上的详细记录，Router 上的市场与账务视图。
 
-## 客户端本地面板（cc-switch）
+## Client 侧
 
-cc-switch 主界面会显示每个供应商的本地用量统计：
+打开 Client 的 Web 界面（直连 `http://<你的服务器>:15721`，或从 Router 的 `/clients` 点「控制台」）。
 
-- 今日 / 本月 token 消耗
-- 请求数
-- 趋势图
+Usage 页记录完整的请求生命周期：
 
-数据来自 cc-switch 自己解析 CLI 工具产生的 session 文件。**这部分是你自己的设备级用量**，跟市场流量是两件事。
+- Provider Bundle / Surface
+- Share 与调用用户
+- 实际命中的上游模型
+- 重试次数
+- 延迟
+- Token 观测状态
 
-适合用来：
+支持聚合、筛选、明细和游标分页。
 
-- 看自己家里 / 公司的 CLI 工具用得多不多
-- 检查上游 token 余额是否要被你自己用完
+**Client 只统计 Token、状态和延迟，不计算成本或金额。** 它不保存任何市场用户、价格或账本 —— 那些在 Router 那边。
 
-## 市场用量面板（cc-switch-market）
+### 查询边界
 
-市场 `/usage` 页面（用 share owner 邮箱登录后）会显示通过你 share 卖出去的流量：
+- 时间范围是左闭右开 `[fromMs, toMs)`
+- 明细最多查 **32 天**
+- 趋势接口单次最多返回 **2,000 个时间桶**
 
-- 每条 share 的请求数
-- input / output token 累计
-- 实际成交金额（已扣抽成的净额）
-- 按时间、模型、subdomain 筛选
+明细保留 32 天，之后只留聚合。
 
-适合用来：
+### 实时事件
 
-- 知道哪个 share 卖得好
-- 知道某个时段流量高峰
-- 对账：跟 `/claim` 的余额变化对得上
+`GET /web-api/events` 是认证 SSE 流，推送 Usage、Share 和隧道事件。Web 界面用它做实时刷新。
 
-## router 公开 dashboard
+### Prometheus
 
-router 的 `/v1/dashboard` 是公开页，匿名也能看：
+`GET /metrics` 暴露 Prometheus 指标，可以接自己的监控。
 
-- share 列表（subdomain、所有者邮箱可能脱敏、当前在线状态）
-- 你自己的 share API key 默认脱敏，登录后才看明文（owner / `shared_with_emails` 才能看）
-- 在线 client 数、世界地图
+## Router 侧
 
-详情见 [路由 Dashboard](/router/dashboard)。
+| 页面 | 看什么 |
+| --- | --- |
+| `/account/provider-usage` | 你作为供应商被消费的用量 |
+| `/account/consumer-usage` | 你作为买家消费的用量 |
+| `/account/share` | 你的 Share 列表与状态 |
+| `/account/rentals` | 你租的东西 |
+| `/account/billing` | 赊账账户、账单、争议 |
+| `/account/market-readiness` | 运营就绪摘要 |
+| `/clients` | 你的 Client 在线状态，可开控制台和终端 |
+| `/share-market` → Mine | 你的挂牌和拼车位状态 |
 
-## 三者对账
+Router 只保存脱敏的 observation：Share、模型、状态、延迟、token 数、地域。**不保存**下游用户的 API key、价格明细或结算数据。
 
-理论上三者应该闭环：
+## 该盯什么
 
-```text
-客户端本地用量
-   ≥ 市场用量（部分本地用没卖出去）
+**在线率。** 计费只按健康服务区间累计，掉线时间不收钱。掉线 = 直接的收入损失，而且租客会跑。
 
-市场用量 → 市场 /claim 余额（按抽成结算）
-   = client_payable 累计变化
-```
+`/clients` 页的状态是 `online` / `reconnecting` / `offline` / `disabled`。记住 **Router 不会替你重启进程**，`offline` 要你自己处理。
 
-不一致最常见的原因：
+**额度水位。** 有限额度用到 80% 会预警，别等用满被动出账 —— 出账会暂停服务，而买家的固定期限不会因此顺延，容易产生争议。
 
-- 你自己 CLI 用了一部分 token，但没经过市场
-- 市场某些请求进入 `needs_review`，还没结算
-- 时间窗对不齐（市场是事件驱动最终一致）
+**Token 限额触顶。** 租客频繁撞限额说明定价档位没配好，考虑调整。
 
-差异较大时再去查；小差异属于正常。
+## 日志
 
-## 哪些数据私密
+Client 的进程日志可以从 Router 拉：
 
-- 客户端本地用量：只在你设备上，谁也看不到
-- 市场用量：只有你（owner 邮箱登录后）能看
-- router dashboard 的 share API key：默认脱敏，配置过 `shared_with_emails` 的人登录可见
+- **Client owner**：最多 100 行
+- **匿名、非 owner 用户、非 owner 管理员**：最多 10 行
+
+日志是脱敏的。
 
 ## 延伸阅读
 
-- [领取收益](/provider/claim) — 用量 vs 余额对账
-- [router Dashboard](/router/dashboard) — 公开页能看到什么
+- [挂到市场](/provider/listing)
+- [账务与收款](/provider/billing)
+- [安全与边界](/reference/security)

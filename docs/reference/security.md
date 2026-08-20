@@ -1,93 +1,191 @@
 # 安全与边界
 
-## 数据存哪
+这一页写明**凭据在哪里终止**、**什么是公开的**、**什么绝不公开**，以及各方各自负责什么。
 
-| 数据 | 存哪 | 谁能读 |
-|---|---|---|
-| 上游 API key | Provider 客户端 SQLite（`~/.cc-switch/cc-switch.db`） | 只有客户端所在设备 |
-| share 的 API key 明文 | 同上（不出客户端） | owner / shared_with_emails 登录 router 后可见 |
-| router 的 share 元数据 | router SQLite（`~/.config/cc-switch-router/cc-switch-router.db`） | router 部署方 |
-| market 的资金 ledger | market SQLite 或 Turso | market 部署方 |
-| API 用户请求原文 | **不保存** | 谁也读不到 |
-| API 用户 usage 元数据 | market SQLite | market 部署方 |
-| `needs_review` 请求调试包 | market 对象存储（本地或 R2） | admin，按保留期清理 |
-| Web session token | HttpOnly cookie | 浏览器（JS 拿不到） |
-| Resend / Gate.io / Dodo 凭证 | router/market 的 `.env` | 部署方运维 |
+## 凭据的三层终止
 
-## 几种 key 互不能替代
+系统里有三类凭据，它们分别在不同的地方终止，互不透传。
 
-| key 类型 | 用途 | 不能用来 |
-|---|---|---|
-| 市场签发的 sk-... | 调 OpenAI/Anthropic 兼容 API | 调 router 内部接口、登录任何 web |
-| router web session cookie | router web 操作 | 调任何模型 API |
-| market web session cookie | market web 操作（含 admin） | 调任何模型 API |
-| Provider 的上游 API key | 在客户端本地用来调上游 | 上传到 router/market（永远不上传） |
-| 设备私钥 (installation) | 跟 router 通信签名 | 提取出去也没用（绑设备） |
+```text
+买家的 Router API Token
+  └── 终止于 Router
+        Router 校验 scope share:invoke，解析出用户主体
+        Client 永远看不到这个 Token
 
-## 身份边界
+Share 内部密钥
+  └── 绑定在隧道路由上
+        Client 只看到这个，用来确认「这是我的哪个 Share」
 
-- **router 邮箱登录** = router 上的身份
-- **market 邮箱登录** = market 上的身份
-- 两边邮箱一致 → 通过 owner_email 关联，但 cookie 互不共用
+供应商凭据（Claude / Codex / Gemini API Key、OAuth token）
+  └── 终止于 Client
+        永不上行到 Router，永不出现在任何公开面
+```
 
-## market 不接受外部身份头
+换句话说：**Router 不持有供应商凭据，Client 不持有买家凭据。**
 
-market 不信任任何 `x-clerk-*`、`x-user-*`、`x-admin` 头。任何身份都通过 router 邮箱验证码登录后，market 自己签发 HttpOnly session cookie 来识别。
+## 边缘鉴权
 
-这是为了避免反向代理或 CDN 误注入身份头导致权限提升。
+买家用自己的 Router 用户 API Token 调用 Share URL。三种头都接受：
 
-## API key 边界
+```text
+Authorization: Bearer <token>
+x-api-key: <token>
+x-goog-api-key: <token>
+```
 
-- API 用户的 sk-... 只在 market 有效
-- Provider 的上游 API key 永远不上传
-- share 的 API key（同上游 key）默认在 dashboard 脱敏，仅 owner / 白名单可见明文
+失败返回：
 
-## 资金边界
+| 情况 | 响应 |
+| --- | --- |
+| 一个头都没带 | `401 missing-router-api-token` |
+| Token 无效 / 无 `share:invoke` scope | `401 invalid-router-api-token` |
 
-- admin 不能直接修改余额缓存
-- 所有人工调整必须通过 ledger transaction
-- 有审计痕迹（关联工单或 admin 备注）
-- 多账户间的钱只能通过预定义路径流动（见 [关键概念](/intro/concepts) 的账务路径）
+## ⚠️ Router 用户 API Token 以明文存储
 
-## 限流 / 风控
+Router 把用户 API Token 存在明文列（`user_api_tokens.token_plaintext`）里，以支持在界面上重复显示。
 
-| 维度 | 默认上限 |
-|---|---|
-| 验证码 / 单邮箱小时上限 | 30 |
-| 验证码 / 单 IP 小时上限 | 20 |
-| 验证码 / 单 installation 小时上限 | 10 |
-| free share 真实用户 IP 并发 | 1 |
-| 验证码错误重试 | 5 次 |
+**含义**：数据库泄露 == 活跃 Token 泄露。
 
-可由部署方调整。
+对自部署运维方：数据库文件、备份和 Turso 凭据要按「等同于全量用户凭据」的级别保护。
 
-## 真实 IP 识别
+## Ingress 上下文签名
 
-经 Cloudflare 进入时，从 `CF-Connecting-IP` 读真实 IP（用于限流和地图）。直连源站时回退到 socket peer IP，防止伪造头绕过。
+Router 转发给 Client 时附带签名上下文。
 
-## 隐私
+- **非对称新鲜度窗口**：最多接受 30 秒之前签发、5 秒之内的未来
+- 校验失败返回**空 body 的 401**，不泄露任何诊断信息；诊断只走回 Router 的内部响应头
+- Router 必须剥掉调用方自带的 `x-user-email` / `x-user-country*`
+- Client 的推理上下文**只接受**签名上下文重新注入的 `x-cc-switch-user-*`
+- `is_internal_share_context_header()` 会剥掉来自公网来源的 `x-cc-switch-ingress-*`
 
-- 邮箱仅用作身份和验证码发送
-- 不会被卖、不会发广告
-- 充值用 Dodo，市场不接触卡号
-- 提现用 Gate.io，市场不存交易所凭证
-- 请求 prompt / 响应原文不保存
+因为窗口很窄，**Router 主机的时钟漂移会直接变成 401**。Router 内建时钟监控只观测和告警，不修改系统时间。
 
-## 升级 / 备份
+## 请求体上限协商
 
-- cc-switch：每次启动前自动备份 SQLite 到 `~/.cc-switch/backups/`，保留 10 份
-- router：建议把 `~/.config/cc-switch-router/` 整体加进定时备份
-- market：用 Turso 时本地有定时 replica 备份；用本地 SQLite 时备份 `~/.config/cc-switch-market/`
+三档上限（普通 10 MB / 媒体 32 MB / 图片 48 MB，均可配置）。Router 在每个转发请求上写一个**未签名**的 `x-cc-switch-ingress-body-limit`（十进制字节），Client 取 `min(本地上限, 声明值)`。
 
-## 灾难恢复
+**为什么未签名是安全的**：伪造这个头只能**降低**上限，不能提高。最坏结果是自己的请求被更早拒绝。
 
-- 上游 API key 丢了 → Provider 在客户端重新填即可
-- router SQLite 丢了 → share、lease 全部丢，所有 client 需要重新启用 share，不影响资金
-- market SQLite 丢了 → 资金 ledger 丢，需要从对象存储里的 webhook 原文 / 提现凭证人工对账
+上限是**内存缓冲上限，不是限速**。请求体读取发生在 `try_acquire_share_permit` **之前**，所以超限返回 `413` 时**不消耗 Share 并发**。
 
-定期备份 SQLite 是重要的。
+## 公开数据边界
+
+Router 的公开面**刻意**公开了不少东西。这不是疏忽，是产品设计 —— 一个不经手资金的市场必须让双方能自证。
+
+公开可见：
+
+- 完整邮箱地址
+- 发票金额
+- 收款方式与联系方式
+- 付款凭证号 / 备注
+- 凭证图片 URL
+- 争议原因
+- 安全的原始错误信息
+
+**参与市场即意味着你的邮箱和收款信息会被交易对手看到。**如果这对你不可接受，不要挂售或租用。
+
+## 唯一的保密例外
+
+以下内容**绝不**出现在数据库、API、日志或界面中 —— 没有例外，没有「脱敏后可见」：
+
+- API Key
+- OAuth / Session token
+- Cookie
+- `Authorization` 头
+- 密码
+- secret
+- 私钥
+- SSH / lease 凭据
+
+唯一的窄例外：`PaymentMethod.token` 在 `kind=crypto` 且值为 `USDT` / `USDC` 时允许出现 —— 因为那是币种标识，不是凭据。
+
+**争议材料和公开事件数据里也不允许出现凭据。**提交争议时不要粘贴日志原文。
+
+## Client 日志的可见性
+
+| 查看者 | 上限 |
+| --- | --- |
+| 已验证的 Client Owner | 100 行 |
+| 匿名访客 | 10 行 |
+| 非 Owner 的登录用户 | 10 行 |
+| 非 Owner 的管理员 | 10 行 |
+
+匿名公开投影另外限制为**最近 5 分钟**（`SERVER_LOG_PUBLIC_ENABLED` 可关）。
+
+Client 审计日志落在 Router 自有的 JSONL / gzip 文件里，不进业务数据库。
+
+## 速率限制与滥用保护
+
+登录：
+
+| 维度 | 默认 |
+| --- | --- |
+| 验证码有效期 | 300 秒 |
+| 发码冷却 | 60 秒（必须 < TTL） |
+| 单挑战最大输错 | 5 次 |
+| 单邮箱每小时 | 30 次 |
+| 单 IP 每小时 | 20 次 |
+| 单来源每小时 | 10 次 |
+
+通用：10 分钟内 10 次失败 → 封禁 1 小时。
+
+并发限流有 **6 个独立的 key**：`share_id`、`share_id:app`、`share_id:app:email`、用户 IP（免费档）、图片任务、市场邮箱。
+
+Client 注册另有三层速率桶（来源 / 全局 / 公钥）、三层新身份持久化额度，以及一道未绑定 Owner installation 的总水位闸。
+
+## 真实客户端 IP
+
+`src/cf.rs` **硬编码** Cloudflare 的 IPv4 / IPv6 段，**不调用任何 Cloudflare API**。
+
+- 对端在 CF 段内 → 信任 `CF-Connecting-IP` / `CF-IPCountry` / `CF-ASN`
+- 否则 → 用 socket 对端 IP
+
+这意味着换用其他 CDN 时需要改代码，不是改配置。
+
+## 请求生命周期与兜底
+
+六个独立阶段边界（请求体 / 响应头 / 首个业务事件 / 业务空闲 / 下游背压 / 绝对生存期）。后台 pump 会持续读取上游响应，所以**即使调用方停止消费，并发也会释放**。
+
+10 秒周期的 watchdog 按唯一 lease 幂等回收漏网请求并告警，**从不重启 Router**。
+
+管理员兜底：`POST /v1/admin/proxy/share-requests/force-release`，`requestId` 与 `shareId` 二选一（恰好一个）。
+
+## 谁负责什么
+
+| 角色 | 负责 |
+| --- | --- |
+| **买家** | 保管自己的 API Token；付款并声明；接受公开面会显示自己的邮箱 |
+| **Share Owner** | 保管供应商凭据；Client 进程的存活；确认到账；接受公开面会显示自己的邮箱与收款方式 |
+| **Host Provider** | 主机本身的安全；接受 Router 会用专用 provision key 登录并安装 Client |
+| **Router 运维方** | 数据库与备份（内含明文 Token）；NTP；TLS；IP 情报端点的选择；告警渠道 |
+
+⚠️ **Router 不负责保持 Client 存活。**见 [FAQ](/reference/faq)。
+
+## 自部署运维方的检查清单
+
+- [ ] `$HOME/.cc-switch-router/.env` 权限收紧（它会覆盖进程环境变量，且含 Turso token、Resend key、Telegram token）
+- [ ] 数据库文件与备份按「全量用户凭据」级别保护
+- [ ] NTP 已配置且被监控
+- [ ] `CC_SWITCH_ROUTER_IP_INTEL_ENDPOINTS` 换成自建的 HTTPS 端点
+- [ ] SSH 公开地址走 DNS-only 记录，不经 CDN 代理
+- [ ] Router 的 systemd 配 `Restart=always`
+- [ ] 备份策略覆盖 libSQL 业务库（metrics 库可丢）
+- [ ] 用户通知 Bot 与运维告警 Bot 用两个不同的 Telegram Token
+
+## Client 侧的数据文件
+
+Client 数据目录下的这些文件可能包含 token、secret 或账号信息，**绝不能提交到 git**：
+
+```text
+accounts.json      accounts.key       providers.json
+shares.json        tunnels.json       usage/
+image-capabilities/
+```
+
+`cc-switch-server config print` 输出的是脱敏摘要，**不打印** password / API token hash、router private key / control secret、provider / account token。
 
 ## 延伸阅读
 
-- [关键概念](/intro/concepts) — 账户类型和账务路径
-- [router 环境变量](/reference/router-env) / [market 环境变量](/reference/market-env)
+- [Share 访问与脱敏](/router/share-access)
+- [Router 环境变量](/reference/router-env)
+- [常见问题](/reference/faq)

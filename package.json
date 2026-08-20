@@ -104,6 +104,7 @@
     "clean": "rimraf --glob \"dist/**\" \"_playwright*/**\" \"src/**/*.d.ts\" \"src/**/*.d.ts.map\"",
     "clean:v4": "rimraf lib/ themes/",
     "dev": "run-p serve:dev watch:*",
+    "docs:check": "node tools/check-docs.mjs",
     "docker:build:test": "npm run docker:cli -- build:test",
     "docker:build": "docker build -f Dockerfile -t docsify-test:local .",
     "docker:clean": "docker rmi docsify-test:local",

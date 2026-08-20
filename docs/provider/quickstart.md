@@ -1,69 +1,112 @@
-# 快速开始
+# Share Owner 快速上手
 
-把你手里的 token 上架到市场，10 分钟跑通。
+你手上有 Claude / Codex / Gemini 的订阅或 API key，想把用不完的额度分给别人（或者收点钱）。
 
-## 你需要
+端到端大概 30 分钟。
 
-- 一台能联网的电脑（Windows / macOS / Linux 任一）
-- 至少一个上游模型 API key（Claude、Codex、Gemini 任一）
-- 一个邮箱（接验证码、收钱、登录后台）
+## 前提
 
-不需要公网 IP，不需要开放端口。
+- 一台能长期开着的 Linux 服务器（VPS、NAS、家用机都行）
+- 至少一份可用的上游凭据
+- 一个邮箱
 
-## 步骤
+没有服务器？去 [Client Market 租一台](/client-market/rent-host)，Router 会帮你把 Client 装好，然后从第 3 步继续。
 
-### 1. 装客户端
-
-去 [安装客户端](/provider/install) 选你系统对应的安装包。
-
-装完打开 cc-switch，会弹一个引导窗口，可以先跳过。
-
-### 2. 添加供应商
-
-主界面右上角点 **+**：
-
-1. 选一个预设（比如 "Claude 官方" 或 "PackyCode"），或选"自定义"。
-2. 填上你的上游 API key。
-3. 点"添加"。
-
-供应商列表里会出现一条记录。
-
-### 3. 启用 share
-
-在该供应商上点"启用 share"。
-
-第一次启用会让你：
-
-1. 输入邮箱、收验证码登录 router（用来识别你是 share 的 owner）
-2. 选一个 subdomain 前缀，比如 `mike-claude`，先到先得
-3. 选 for_sale：`free`（免费分享）还是 `sale`（出售）
-
-确认后客户端会自动开 SSH 隧道挂到 router 上，几秒后 share 就在线。
-
-### 4. 验证
-
-去 [router dashboard](/router/dashboard)（公开页面）应该能看到你的 share，状态是 online。
-
-或者用市场里的任意 API key 调一次：
+## 1. 装 Client
 
 ```bash
-curl https://market.tokenswitch.cc/v1/chat/completions \
-  -H "Authorization: Bearer sk-...你的市场key..." \
-  -d '{"model": "...你 share 上挂的模型...", "messages": [{"role":"user","content":"hi"}]}'
+printf '%s\n' "你的Web密码" | bash install-client.sh \
+  https://jptokenswitch.cc \
+  you@example.com \
+  --password-stdin
 ```
 
-返回正常说明上下游都通了。
+脚本会下载 `cc-switch-server` 二进制、初始化配置、注册到 Router 并启动一次。
 
-### 5. 等收钱
+详见 [安装 Client](/provider/install)。
 
-market 那边每次 API 调用扣的钱（净额）会进你的 `client_payable` 余额。
+## 2. 打开管理界面
 
-去市场 `/claim` 看本人余额：[领取收益](/provider/claim)。
+```text
+http://<你的服务器>:15721
+```
 
-攒到一定金额可以提现：[提现](/provider/payout)。
+用刚才设的密码登录。
 
-## 然后呢
+也可以从 Router 的 **Clients** 页（`/clients`）点「控制台」，在弹窗里打开 —— 走的是 client tunnel，不需要暴露 15721 端口到公网。
 
-- 想精细化定价（不同模型、不同时段）：[share 定价](/provider/pricing)
-- 想把 share 给特定朋友看 API key 明文：[router/share 共享与脱敏](/router/share-acl)
-- 想顺便用 cc-switch 管 MCP/Skills：[MCP / Skills / Prompts](/provider/extras)
+## 3. 添加 Provider 和账号
+
+**Provider** 是接入配置（接口地址、协议、模型映射），**账号** 是具体凭据（API key 或一次 OAuth 登录）。
+
+在 Web 界面里选 app（Claude / Codex / Gemini）→ 选 Provider 预设 → 添加账号。
+
+OAuth 类的登录全程在 Server 侧完成，不需要桌面应用。
+
+详见 [添加 Provider](/provider/add-provider)。
+
+> **你的凭据不会离开这台机器。** 本地用 XChaCha20-Poly1305 加密存储，Router 永远拿不到明文。
+
+## 4. 创建 Share
+
+Share 是对外的入口。绑定一个或多个账号，Router 给它分配子域名。
+
+**默认是私有的**（`freeAccess = false`）。
+
+详见 [创建 Share](/provider/share)。
+
+## 5. 挂到 Share Market
+
+回到 Router 的 **Share Market**（`/share-market`），点「添加 Share」，从你当前 active、尚未挂售的 Share 里选一个。
+
+然后创建拼车位（最多 20 个），每个独立配置：
+
+- Token 限额与重置周期
+- 并发限额
+- 每日 USD 价格（留空 = 免费位）
+- 服务期限（1–365 天，或无固定期限）
+
+详见 [挂到市场](/provider/listing)。
+
+## 6. 配准入策略
+
+付费位默认**白名单** —— 别人租之前要你批准并授予信用额度。
+
+免费位默认**黑名单** —— 没被拉黑就能直接租。
+
+在 `/account/market-access` 管理。详见 [准入策略](/provider/access)。
+
+## 7. 填收款资料
+
+收费之前**先把收款方式和联系方式填好**（`/account/payments`）。
+
+出账时系统会把这份资料冻结进账单。
+
+在 `/account/market-readiness` 看运营就绪度：收款资料齐不齐、有多少待准入、账务待办、四项准入策略状态。
+
+## 8. 等人来租，然后收钱
+
+- 前 12 小时健康时长不计费（买家试用）
+- 之后按 Router 观测到的健康服务区间累计
+- 有限额度用到 80% 双方预警
+- 用满 / 主动清账 / 最后一个服务结束 → 合并出账
+- 买家线下付款并声明 → **你确认到账** → 服务恢复
+
+详见 [账务与收款](/provider/billing)。
+
+## 关键取舍
+
+| 你想要 | 怎么配 |
+| --- | --- |
+| 只给几个朋友用，不收钱 | 私有 Share + `userGrants` 逐个授权，不挂市场 |
+| 公开免费给所有登录用户 | 开 `freeAccess`（**不能同时挂市场**） |
+| 收钱 | 挂 Share Market，配拼车位价格 |
+
+`freeAccess` 和市场挂牌**严格互斥**，系统在业务事务和数据库层双向阻止。
+
+## 延伸阅读
+
+- [安装 Client](/provider/install)
+- [创建 Share](/provider/share)
+- [挂到市场](/provider/listing)
+- [看板与用量](/provider/dashboard)

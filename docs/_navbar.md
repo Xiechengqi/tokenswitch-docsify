@@ -8,8 +8,13 @@
 
 - 我是…
 
-  - [API 用户](/market/quickstart)
-  - [Provider](/provider/quickstart)
-  - [自部署](/self-host/overview)
+  - [想用 token](/share-market/quickstart)
+  - [想出 token](/provider/quickstart)
+  - [想出/租主机](/client-market/overview)
+  - [想自部署](/self-host/overview)
 
-- [GitHub](https://github.com/tokenswitch)
+- 仓库
+
+  - [cc-switch-server（Client）](https://github.com/Xiechengqi/cc-switch-server)
+  - [cc-switch-router（Router）](https://github.com/Xiechengqi/cc-switch-router)
+  - [本文档站](https://github.com/Xiechengqi/tokenswitch-docsify)
